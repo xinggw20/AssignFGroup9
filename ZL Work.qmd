@@ -4,23 +4,189 @@ format: html
 editor: visual
 ---
 
-## Quarto
+## Introduction
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+In this project, we will explore the data of strawberry agriculture in the United States obtained from USDA. Specifically, our research will focus on the yield, the ratio of crop grown to the unit area of land, of various states from 1998 to 2024.
 
-## Running Code
+We will conduct some basic exploratory data analysis, trying to answer questions like:
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+1\) How did the yield of each state differ?
+
+2\) How did the yield of each year differ?
+
+3\) How did the yield of each state change across the years?
+
+Additionally, we will see what other insights about the yield of U.S.'s strawberry agriculture we may extract from the limited data available to us.
+
+## Set Up
 
 ```{r}
-1 + 1
-```
+#| label: load libraries and set options
+#| warning: false
+#| message: false
 
-You can add options to executable code like this
+library(knitr)  
+library(kableExtra)
+library(tidyverse)
+library(stringr)
+library(ggplot2)
+```
 
 ```{r}
-#| echo: false
-2 * 2
+# Define function: drop_one_value_col, which drops all columns that contain only one value
+drop_one_value_col <- function(df){
+  drop <- c()
+  for (i in 1:ncol(df)){
+    uni <- unique(df[,i])
+    if (is.data.frame(uni)){
+      unique_val <- nrow(unique(df[,i]))
+    } else {
+      unique_val <- length(unique(df[,i]))
+    }
+
+    
+    
+    if (unique_val == 1){
+      drop <- c(drop, i)
+    }
+  }
+  
+  if (length(drop) != 0){
+    df <- df[,-drop]
+  }
+  df
+}
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+## Load and Clean the Data
+
+```{r}
+#| label: read data 
+
+# Load the strawberrt data from csv file 
+strawberry <- read.csv("strawberry_10oct25.csv") %>% 
+  # Drop all single value column
+  drop_one_value_col()
+
+# Divide the data into two parts: survey & census
+strawberry.sur <- strawberry %>%
+  filter(Program=="SURVEY") 
+strawberry.cen <- strawberry %>%
+  filter(Program=="CENSUS")
+
+```
+
+Select data that is relevant to our research theme: yield
+
+```{r}
+# Since census data contains nothing relevant to yielding, we will focus solely on the survey data
+# Select survey data 
+strawberry.sur <- strawberry %>%
+  filter(Program=="SURVEY") %>%
+  # Select Data.Item rows that contains information relevant to yield
+  filter(grepl("ACRES|PRODUCTION|YIELD", Data.Item)) %>%
+  # Drop all one value columns
+  drop_one_value_col()
+
+# Clean the data 
+# Remove all "STRAWBERRIES - " from the column Data.Item, since they serve no purpose 
+strawberry.sur$Data.Item <- str_remove_all(strawberry.sur$Data.Item, "STRAWBERRIES - ") 
+# Remove all "STRAWBERRIES, " from the column Data.Item, since they serve no purpose 
+strawberry.sur$Data.Item <- str_remove_all(strawberry.sur$Data.Item, "STRAWBERRIES, ") 
+
+# Replace "(D)" with NA
+strawberry.sur$Value[strawberry.sur$Value ==" (D)"] <- NA
+
+# Turn all values into numeric
+strawberry.sur$Value <- str_remove_all(strawberry.sur$Value, ",")
+strawberry.sur$Value <- as.numeric(strawberry.sur$Value)
+```
+
+Reshape the data
+
+```{r}
+strawberry.sur.wider <- strawberry.sur %>% 
+  pivot_wider(
+    names_from = Data.Item,
+    values_from = Value
+    ) %>%
+  # We do not consider "FORECAST" data, filter those rows out
+  filter(!grepl("FORECAST", Period)) %>%
+  # Arrange rows by state
+  arrange(State)  %>%
+  # Drop columns that contained "TON"
+  select(!contains("TON")) %>%
+  # Drop all one value columns
+  drop_one_value_col()
+```
+
+## Exploratory Data Analysis: Yield
+
+Research Question: How does each state's yield differ?
+
+```{r}
+strawberry.sur.wider %>%
+  ggplot(aes(x=State, y=`YIELD, MEASURED IN CWT / ACRE`, fill=State)) +
+  scale_x_discrete(labels=c("CA", "FL", "NY", "NC", "OR", "WA")) +
+  geom_boxplot() +
+  labs(x="State", y="Yield") +
+  ggtitle("Yield by State")
+```
+
+Research Question: How does each year's yield differ?
+
+```{r}
+strawberry.sur.wider %>%
+  filter(Year %in% 1998:2011) %>%
+  ggplot(aes(x=as.character(Year), y=`YIELD, MEASURED IN CWT / ACRE`, fill=as.character(Year))) +
+  geom_boxplot() +
+  labs(x="Year", y="Yield") +
+  ggtitle("Yield by Year")
+
+strawberry.sur.wider %>%
+  filter(Year %in% 2012:2024) %>%
+  ggplot(aes(x=as.character(Year), y=`YIELD, MEASURED IN CWT / ACRE`, fill=as.character(Year))) +
+  geom_boxplot() +
+  labs(x="Year", y="Yield") +
+  ggtitle("Yield by Year") 
+```
+
+Research Question: How does the yield of each state change by year?
+
+```{r}
+strawberry.sur.wider %>%
+  ggplot(aes(x=Year, y=`YIELD, MEASURED IN CWT / ACRE`, color=State)) +
+  geom_line() +
+  geom_point()+
+  labs(x="Year", y="Yield") +
+  ggtitle("Yield of Each State by Year")
+```
+
+```{r}
+strawberry %>%
+  distinct(Data.Item)
+```
+
+(This doesn't work, delete later )
+
+```{r}
+# Check for columns that contain very little information
+# Amount of info is indicated by the number of non NA rows of each column
+cols <- ncol(strawberry.sur.wider)
+rows <- nrow(strawberry.sur.wider)
+for (i in 1:cols){
+  name <- names(strawberry.sur.wider)[i]
+  notna <- sum(!is.na(strawberry.sur.wider[,i]))
+  print(paste("Col No.:", i))
+  print(name)
+  print(notna/rows)
+}
+# Remove all columns whose non na rows are less than 50%
+# They are columns whose names contain "UTILIZED", "SOLD", "PROCESSING"
+strawberry.sur.wider <- strawberry.sur.wider %>%
+  select(!contains("UTILIZED")) %>%
+  select(!contains("SOLD")) %>%
+  select(!contains("PROCESSING")) 
+
+# Check if 
+```
