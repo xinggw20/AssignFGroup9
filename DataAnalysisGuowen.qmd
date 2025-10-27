@@ -1,0 +1,126 @@
+---
+title: "DataClean_Guowen"
+author: "Guowen Xing"
+format: html
+editor: visual
+---
+
+## Data cleaning
+
+Firstly, use a function to automatically remove all the empty or single-value columns to remove irrelevant variables. Secondly, filter the data and only keep the YIELD data.
+
+```{r}
+# 1. Load necessary libraries
+# We use 'tidyverse' for all data manipulation (dplyr, readr, stringr)
+library(tidyverse)
+
+# 2. Define the function to remove single-value columns
+# This function checks each column. If a column has only 1 unique value
+# (or 0, if it's all NA), it will be removed.
+drop_one_value_col <- function(df) {
+  df %>%
+    dplyr::select(where(~n_distinct(., na.rm = TRUE) > 1))
+}
+
+# 3. Load the *original* dataset
+cat("Loading 'strawberry_10oct25.csv'...\n")
+strawberry <- readr::read_csv("strawberry_10oct25.csv", show_col_types = FALSE) 
+
+# 4. Apply the function to remove single-value columns
+cat("Removing columns with only one unique value...\n")
+strawberry_skinny <- drop_one_value_col(strawberry)
+
+# 5. Clean and filter the data (REVISED: Type logic removed)
+cat("Filtering for all Yield data...\n")
+strawberry_yield_cleaned <- strawberry_skinny %>%
+  
+  # Filter rows to only include 'YIELD' data items
+  dplyr::filter(stringr::str_detect(`Data Item`, "YIELD")) %>%
+  
+  # Convert 'Value' and 'CV (%)' columns to numeric
+  dplyr::mutate(
+    Yield_Value = readr::parse_number(Value),
+    CV_Percent = readr::parse_number(`CV (%)`)
+  ) %>%
+  
+  # Select and rename the columns we care about
+  # (REVISED: 'Type' column is removed)
+  dplyr::select(
+    Year,
+    State,
+    Program,
+    `Data Item`,
+    Yield = Yield_Value,
+    CV_Percent
+  ) %>%
+  
+  # Remove any rows where the Yield value is NA
+  dplyr::filter(!is.na(Yield))
+
+# 6. Save the cleaned data to a new CSV file
+output_filename <- "strawberry_yield_cleaned.csv"
+readr::write_csv(strawberry_yield_cleaned, output_filename)
+
+cat(paste("\nCleaned data (yield only) saved to:", output_filename, "\n"))
+print(head(strawberry_yield_cleaned))
+```
+
+## Data Analysis
+
+```{r}
+# 2. Load the Cleaned Data
+cat("Loading 'strawberry_yield_cleaned.csv'...\n")
+df <- read_csv("strawberry_yield_cleaned.csv", show_col_types = FALSE)
+
+# 3. Filter for "CWT / ACRE"
+df_analysis <- df %>%
+  filter(str_detect(`Data Item`, "CWT / ACRE"))
+
+cat(paste("Filtered data to", nrow(df_analysis), "rows containing 'CWT / ACRE'.\n"))
+
+
+# --- 4. New Data Visualizations ---
+
+# Plot 1: Bar Chart of Average Yield by State
+plot_avg_yield_bar <- df_analysis %>%
+  group_by(State) %>%
+  summarise(Mean_Yield = mean(Yield, na.rm = TRUE)) %>%
+  ggplot(aes(x = reorder(State, Mean_Yield), y = Mean_Yield)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() + 
+    labs(title = "Average Strawberry Yield by State",
+         subtitle = "Filtered for 'YIELD, MEASURED IN CWT / ACRE'",
+         x = "State",
+         y = "Average Yield (CWT / ACRE)") +
+    theme_minimal()
+
+# --- THIS LINE SHOWS THE PLOT ---
+print(plot_avg_yield_bar) 
+# --------------------------------
+
+# Save the plot
+ggsave("avg_yield_by_state_bar.png", plot_avg_yield_bar, width = 8, height = 6)
+cat("Saved 'avg_yield_by_state_bar.png'\n")
+
+
+# Plot 2: Yield vs. Year, Faceted by State
+plot_faceted_time <- ggplot(df_analysis, aes(x = Year, y = Yield)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) + 
+  facet_wrap(~ State, scales = "free_y") + 
+  labs(title = "Strawberry Yield Over Time by State",
+       subtitle = "Each state's trend is shown separately",
+       x = "Year",
+       y = "Yield (CWT / ACRE)") +
+  theme_bw() 
+
+# --- THIS LINE SHOWS THE PLOT ---
+print(plot_faceted_time)
+# --------------------------------
+
+# Save the plot
+ggsave("yield_vs_time_faceted.png", plot_faceted_time, width = 10, height = 7)
+cat("Saved 'yield_vs_time_faceted.png'\n")
+
+cat("Plots were shown and saved.\n")
+```
