@@ -1,5 +1,5 @@
 ---
-title: "ZL's Works"
+title: "Assignment F Group 9 Report"
 format: html
 editor: visual
 ---
@@ -126,6 +126,31 @@ strawberry.sur.wider <- strawberry.sur %>%
 ### Research Question: How does each state's yield differ?
 
 ```{r}
+# Load the Cleaned Data
+df <- read_csv("strawberry_yield_cleaned.csv", show_col_types = FALSE)
+
+# Filter for "CWT / ACRE"
+df_analysis <- df %>%
+  filter(str_detect(`Data Item`, "CWT / ACRE"))
+
+# Plot: Bar Chart of Average Yield by State
+plot_avg_yield_bar <- df_analysis %>%
+  group_by(State) %>%
+  summarise(Mean_Yield = mean(Yield, na.rm = TRUE)) %>%
+  ggplot(aes(x = reorder(State, Mean_Yield), y = Mean_Yield)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() + 
+    labs(title = "Average Strawberry Yield by State",
+         x = "State",
+         y = "Average Yield (CWT / ACRE)") +
+    theme_minimal()
+
+print(plot_avg_yield_bar) 
+```
+
+Here is the histogram shows average yield including each year, for each states. It is obvious that California has the highest yield, and New York has the lowest. Next is another plot shows distribution of yield for each state.
+
+```{r}
 strawberry.sur.wider %>%
   ggplot(aes(x=State, y=`YIELD, MEASURED IN CWT / ACRE`, fill=State)) +
   scale_x_discrete(labels=c("CA", "FL", "NY", "NC", "OR", "WA")) +
@@ -194,6 +219,23 @@ From this graph we can see that California maintain a much higher yield, as well
 Florida also seems to have a yield (and variation) much higher than all other states except for California. It also seems to have a decreasing trend.
 
 The yields for all other states are fairly close to each other and do not vary much.
+
+```{r}
+# Plot : Yield vs. Year, Faceted by State
+plot_faceted_time <- ggplot(df_analysis, aes(x = Year, y = Yield)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) + 
+  facet_wrap(~ State, scales = "free_y") + 
+  labs(title = "Strawberry Yield Over Time by State",
+       subtitle = "Each state's trend is shown separately",
+       x = "Year",
+       y = "Yield (CWT / ACRE)") +
+  theme_bw() 
+
+print(plot_faceted_time)
+```
+
+Here is another figure with the group of plots that shows each states field trend separately in detail. We can get similar result. California has the highest yield and increasing trend. Florida has high yield comparing to the rest of 4 states, but has decreasing trend.
 
 ## EDA: Organic vs Conventional Strawberry Yield of the Entire U.S.
 
