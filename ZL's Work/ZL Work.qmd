@@ -122,6 +122,67 @@ strawberry.sur.wider <- strawberry.sur %>%
 
 ## Exploratory Data Analysis: Yield
 
+```{r}
+plot_avg_yield_bar <- df_analysis %>%
+  group_by(State) %>%
+  ggplot(aes(x = Yield)) +
+    geom_histogram(fill = "steelblue") +
+    facet_wrap(~ State, ncol=3) + 
+    labs(title = "Average Strawberry Yield by State",
+         subtitle = "Filtered for 'YIELD, MEASURED IN CWT / ACRE'",
+         x = "State",
+         y = "Average Yield (CWT / ACRE)") +
+    theme_minimal()
+print(plot_avg_yield_bar) 
+
+
+
+plot_avg_yield_bar <- df_analysis %>%
+  group_by(State) %>%
+  summarise(Mean_Yield = median(Yield, na.rm = TRUE)) %>%
+  ggplot(aes(x = reorder(State, Mean_Yield), y = Mean_Yield)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() + 
+    labs(title = "Average Strawberry Yield by State",
+         subtitle = "Filtered for 'YIELD, MEASURED IN CWT / ACRE'",
+         x = "State",
+         y = "Average Yield (CWT / ACRE)") +
+    theme_minimal()
+print(plot_avg_yield_bar) 
+
+
+
+plot_avg_yield_bar <- df_analysis %>%
+  group_by(State) %>%
+  summarise(Mean_Yield = mean(Yield, na.rm = TRUE)) %>%
+  ggplot(aes(x = reorder(State, Mean_Yield), y = Mean_Yield)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() + 
+    labs(title = "Average Strawberry Yield by State",
+         subtitle = "Filtered for 'YIELD, MEASURED IN CWT / ACRE'",
+         x = "State",
+         y = "Average Yield (CWT / ACRE)") +
+    theme_minimal()
+print(plot_avg_yield_bar) 
+```
+
+```{r}
+plot_faceted_time <- ggplot(df_analysis, aes(x = Year, y = Yield)) +
+  geom_line() +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) + 
+  facet_wrap(~ State, scales = "free_y") + 
+  ylim(0,850) +
+  labs(title = "Strawberry Yield Over Time by State",
+       subtitle = "Each state's trend is shown separately",
+       x = "Year",
+       y = "Yield (CWT / ACRE)") +
+  theme_bw() 
+
+# --- THIS LINE SHOWS THE PLOT ---
+print(plot_faceted_time)
+```
+
 Research Question: How does each state's yield differ?
 
 ```{r}
@@ -184,6 +245,7 @@ strawberry.sur.wider %>%
   ggplot(aes(x=Year, y=`YIELD, MEASURED IN CWT / ACRE`, color=State)) +
   geom_line() +
   geom_point()+
+  geom_smooth(method = "lm", se = FALSE) +
   labs(x="Year", y="Yield") +
   ggtitle("Yield of Each State by Year")
 ```
