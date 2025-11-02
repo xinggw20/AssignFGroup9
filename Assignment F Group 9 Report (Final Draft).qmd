@@ -1,0 +1,338 @@
+---
+title: "Assignment F Group 9 Report"
+format: html
+editor: visual
+---
+
+## Introduction
+
+In this project, we will explore the data of strawberry agriculture in the United States obtained from USDA. Specifically, our research will focus on the strawberry yield, the ratio of crop grown to the unit area of land, of various states from 1998 to 2024.
+
+Firstly, we will conduct some basic exploratory data analysis (EDA) on the survey data of strawberry yield of some selected states, trying to answer the following research questions:
+
+1\) How did the yield of each state differ?
+
+2\) How did the yield of each year differ?
+
+3\) How did the yield of each state change across the years?
+
+Next, we will explore the census data on the strawberry yield of the entire U.S.,
+
+Additionally, we will see what other insights about strawberry agriculture in the U.S. may be extracted from the data available to us.
+
+## Set Up
+
+```{r}
+#| label: load libraries and set options
+#| warning: false
+#| message: false
+
+library(knitr)  
+library(kableExtra)
+library(tidyverse)
+library(stringr)
+library(ggplot2)
+library(cowplot)
+```
+
+```{r}
+# Define function: drop_one_value_col, which drops all columns that contain only one value
+drop_one_value_col <- function(df){
+  drop <- c()
+  for (i in 1:ncol(df)){
+    uni <- unique(df[,i])
+    if (is.data.frame(uni)){
+      unique_val <- nrow(unique(df[,i]))
+    } else {
+      unique_val <- length(unique(df[,i]))
+    }
+
+    
+    
+    if (unique_val == 1){
+      drop <- c(drop, i)
+    }
+  }
+  
+  if (length(drop) != 0){
+    df <- df[,-drop]
+  }
+  df
+}
+```
+
+## EDA: Strawberry Yield of the Selected States
+
+### Load and Clean the Data
+
+```{r}
+# Load the strawberrt data from csv file 
+strawberry <- read.csv("strawberry_10oct25.csv") %>% 
+  # Drop all single value column
+  drop_one_value_col()
+
+# Divide the data into two parts: survey & census
+strawberry.sur <- strawberry %>%
+  filter(Program=="SURVEY") 
+strawberry.cen <- strawberry %>%
+  filter(Program=="CENSUS")
+
+```
+
+Select data that is relevant to our research theme: yield
+
+Since state census data contains nothing relevant to yield, so we will focus solely on the survey data for this section
+
+```{r}
+# Select survey data 
+strawberry.sur <- strawberry %>%
+  filter(Program=="SURVEY") %>%
+  # Select Data.Item rows that contains information relevant to yield
+  filter(grepl("ACRES|PRODUCTION|YIELD", Data.Item)) %>%
+  # Drop all one value columns
+  drop_one_value_col()
+
+# Clean the data 
+# Remove all "STRAWBERRIES - " from the column Data.Item, since they serve no purpose 
+strawberry.sur$Data.Item <- str_remove_all(strawberry.sur$Data.Item, "STRAWBERRIES - ") 
+# Remove all "STRAWBERRIES, " from the column Data.Item, since they serve no purpose 
+strawberry.sur$Data.Item <- str_remove_all(strawberry.sur$Data.Item, "STRAWBERRIES, ") 
+
+# Replace "(D)" with NA
+strawberry.sur$Value[strawberry.sur$Value ==" (D)"] <- NA
+
+# Turn all values into numeric
+strawberry.sur$Value <- str_remove_all(strawberry.sur$Value, ",")
+strawberry.sur$Value <- as.numeric(strawberry.sur$Value)
+```
+
+Reshape the data
+
+```{r}
+strawberry.sur.wider <- strawberry.sur %>% 
+  pivot_wider(
+    names_from = Data.Item,
+    values_from = Value
+    ) %>%
+  # We do not consider "FORECAST" data, filter those rows out
+  filter(!grepl("FORECAST", Period)) %>%
+  # Arrange rows by state
+  arrange(State)  %>%
+  # Drop columns that contained "TON"
+  select(!contains("TON")) %>%
+  # Drop all one value columns
+  drop_one_value_col()
+```
+
+### Question 1: How does each state's yield differ?
+
+```{r}
+strawberry.sur.wider %>%
+  group_by(State) %>%
+  summarise(Median_Yield = median(`YIELD, MEASURED IN CWT / ACRE`, na.rm = TRUE)) %>%
+  ggplot(aes(x = State, y = Median_Yield)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() + 
+    labs(title = "Median Strawberry Yield by State",
+         x = "State",
+         y = "Median Yield (CWT / ACRE)") +
+    theme_minimal()
+```
+
+```{r}
+strawberry.sur.wider %>%
+  ggplot(aes(x=State, y=`YIELD, MEASURED IN CWT / ACRE`, fill=State)) +
+  scale_x_discrete(labels=c("CA", "FL", "NY", "NC", "OR", "WA")) +
+  geom_boxplot() +
+  labs(x="State", y="Yield (CWT/Acres)") +
+  ggtitle("Yield by State")
+```
+
+Here the bar chart shows the median strawberry yield of each state. We can see a clear difference between different states: the California has a median yield much higher than all other states, while New York has a median yield much lower than all other states.
+
+The boxplot confirms the pattern we draw based on the bar chart and provides us more information. We can see that the strawberry yield of California is much higher than the rest of the states, and it also has a much higher variation. Despite the high variation, the yield stays within the range between 500 and 800 CTW/Acres, which is still much higher than all other states even at its lowest point. Florida also seems to fairly high yield, both in value and variation. Although it is significantly lower than California, it is still significantly than all other states.The remaining states have a very low yet similar yield value and variation.
+
+### Question 2: How does each year's yield differ?
+
+```{r}
+strawberry.sur.wider %>%
+  group_by(Year) %>%
+  summarise(Median_Yield = median(`YIELD, MEASURED IN CWT / ACRE`, na.rm = TRUE)) %>%
+  ggplot(aes(x = Year, y = Median_Yield)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() + 
+    labs(title = "Median Strawberry Yield by Year",
+         x = "Year",
+         y = "Median Yield (CWT / ACRE)") +
+    theme_minimal()
+```
+
+```{r}
+strawberry.sur.wider %>%
+  filter(Year %in% 1998:2011) %>%
+  ggplot(aes(x=as.character(Year), y=`YIELD, MEASURED IN CWT / ACRE`, fill=as.character(Year))) +
+  geom_boxplot() +
+  labs(x="Year", y="Yield (CWT/Acres)") +
+  ggtitle("Yield by Year")
+
+strawberry.sur.wider %>%
+  filter(Year %in% 2012:2024) %>%
+  ggplot(aes(x=as.character(Year), y=`YIELD, MEASURED IN CWT / ACRE`, fill=as.character(Year))) +
+  geom_boxplot() +
+  labs(x="Year", y="Yield (CWT/Acres)") +
+  ggtitle("Yield by Year") 
+```
+
+The first thing we observe in the graph is that there is a big jump from 2018 to 2019, this is probably due to the fact that from 2019, we only have data from California and Florida, and these two states have a yield much higher than the rest of the states.
+
+The second thing we can see in the graph is that the variation of the yield of each year is fairly high, and there is an outline in each year: a value much higher than the rest and has its own distinct pattern of behavior. Base on the analysis from the previous section "Yield by State", we assume that the outliner values belong to the state California. And the high variation may due to the high yield of Florida.
+
+We decide to redo the plot while excluding the data from California and Florida.
+
+```{r}
+strawberry.sur.wider %>%
+  group_by(Year) %>%
+  filter(!State %in% c("CALIFORNIA", "FLORIDA")) %>%
+  summarise(Median_Yield = median(`YIELD, MEASURED IN CWT / ACRE`, na.rm = TRUE)) %>%
+  ggplot(aes(x = Year, y = Median_Yield)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() + 
+    labs(title = "Median Strawberry Yield by Year",
+         subtitle = "Exclude CA, FL",
+         x = "Year",
+         y = "Median Yield (CWT / ACRE)") +
+    theme_minimal()
+```
+
+```{r}
+strawberry.sur.wider %>%
+  filter(Year %in% 1998:2008, !State %in% c("CALIFORNIA", "FLORIDA")) %>%
+  ggplot(aes(x=as.character(Year), y=`YIELD, MEASURED IN CWT / ACRE`, fill=as.character(Year))) +
+  geom_boxplot() +
+  labs(x="Year", y="Yield (CWT/Acres)") +
+  ggtitle("Yield by Year (Exclude CA, FL)") +
+  ylim(20,150)
+
+strawberry.sur.wider %>%
+  filter(Year %in% 2009:2024, !State %in% c("CALIFORNIA", "FLORIDA")) %>%
+  ggplot(aes(x=as.character(Year), y=`YIELD, MEASURED IN CWT / ACRE`, fill=as.character(Year))) +
+  geom_boxplot() + 
+  labs(x="Year", y="Yield (CWT/Acres)") +
+  ggtitle("Yield by Year (Exclude CA, FL)") +
+  ylim(20,150)
+
+
+```
+
+Here we can see that the variation of yield between different years is much smaller and the outline in the previous graph is gone. The new graph only includes year 1998 to 2018, because there is no data after 2018 for states other than California and Florida, this explains the "jump" from 2018 to 2019 in the previous graph.
+
+We will not conduct a separate analysis on the yearly yield of states California and Florida in this section. Since it does not make sense to use bar plot and boxplot when there are only two data points for each year. For instead, the behavior of the yield of all states (including California and Florida) over the years will be explored in the next section.
+
+### Question 3: How does the yield of each state change by year?
+
+```{r}
+strawberry.sur.wider %>%
+  ggplot(aes(x=Year, y=`YIELD, MEASURED IN CWT / ACRE`, color=State)) +
+  geom_line() +
+  geom_point()+
+  labs(x="Year", y="Yield (CWT/Acres)") +
+  ggtitle("Yield of Each State by Year")
+```
+
+```{r}
+# Plot : Yield vs. Year, Faceted by State
+strawberry.sur.wider %>%
+  ggplot(aes(x = Year, y = `YIELD, MEASURED IN CWT / ACRE`)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) + 
+  facet_wrap(~ State, scales = "free_y") + 
+  labs(title = "Strawberry Yield Over Time by State",
+       subtitle = "Each state's trend is shown separately",
+       x = "Year",
+       y = "Yield (CWT / ACRE)") +
+  ylim(20,800)
+
+```
+
+From the graph, we can see the overall trend of each state's strawberry yield. California has an increasing trend, despite the great variation. Florida on the other hand has a decreasing trend. Interestingly, we can see that as the yield of Florida decrease, the variation also decrease. The strawberry yield of all other states maintain a very stable trend, with low value and variation. Which raises the question: do the the strawberry yield of states with low value also tend to have lower variation?
+
+## EDA: Organic Strawberry Yield of the Entire U.S.
+
+### Load and clean the data
+
+```{r}
+
+# Load the national census strawberry data from csv file 
+strawberry.national <- read.csv("StrawberryCensusNational.csv") %>% 
+  filter(!grepl("AREA GROWN", Domain)) %>% 
+  filter(!grepl("OPERATIONS", Data.Item)) %>%
+  filter(!grepl("SALES", Data.Item)) %>%
+  # Drop all single value column
+  drop_one_value_col()
+
+# Remove redundant strings from Data.Item column
+strawberry.national$Data.Item <- str_remove_all(strawberry.national$Data.Item, "STRAWBERRIES - ") 
+strawberry.national$Data.Item <- str_remove_all(strawberry.national$Data.Item, "STRAWBERRIES, ") 
+
+# Select and reorgnize all data relevant to the organic strawberry
+strawberry.national.organic <- strawberry.national %>% 
+  filter(grepl("ORGANIC", Domain)) %>%
+  filter(Year>=2015 | grepl("(NOP USDA CERTIFIED & EXEMPT)", Domain.Category)) %>%
+  select(Year, Data.Item, Domain.Category, Value) 
+strawberry.national.organic$Data.Item <- str_remove_all(strawberry.national.organic$Data.Item, "ORGANIC - ") 
+
+strawberry.national.organic <- strawberry.national.organic %>%
+  pivot_wider(
+    names_from = Data.Item,
+    values_from = Value
+    ) 
+
+# Turn the acres value into numeric
+strawberry.national.organic$`ACRES HARVESTED` <- str_remove_all(strawberry.national.organic$`ACRES HARVESTED`, ",")
+strawberry.national.organic$`ACRES HARVESTED` <- as.numeric(strawberry.national.organic$`ACRES HARVESTED`)
+# Turn the production value into numeric
+strawberry.national.organic$`PRODUCTION, MEASURED IN CWT` <- str_remove_all(strawberry.national.organic$`PRODUCTION, MEASURED IN CWT`, ",")
+strawberry.national.organic$`PRODUCTION, MEASURED IN CWT` <- as.numeric(strawberry.national.organic$`PRODUCTION, MEASURED IN CWT`)
+
+# Select columns relevant to our analysis
+strawberry.national.organic <- strawberry.national.organic %>% 
+  mutate(`YIELD (CWT / ACRES)` = `PRODUCTION, MEASURED IN CWT`/`ACRES HARVESTED`) %>% select(-Domain.Category)
+
+```
+
+### EDC: Organic strawberry yield
+
+```{r}
+strawberry.national.organic %>%
+  ggplot(aes(x=Year, y=`YIELD (CWT / ACRES)`)) +
+  geom_point() +
+  labs(title="Organic Yield")
+```
+
+As shown in the graph above, we only have 5 data points in total for organic strawberry yield. We conclude that there is not enough data to make meaningful inference.
+
+## Conclusion
+
+### EDA: Strawberry yield of selected states from 1998 to 2024
+
+We have some interesting findings about strawberry yield data of the selected states from 1998 to 2024 through the exploratory data analysis:
+
+1\) California has a significantly higher yield comparing to all other states and is overall increasing.
+
+2\) Florida has a yield much lower than California, but noticeably higher than the rest of the states. Though it seems to have a decreasing trend. Interestingly, as the yield of Florida decrease in value, its variation also decrease.
+
+3\) All other states have similar yield, with low variation and a stable trend.
+
+Our research topics focus on the strawberry yield. There are other columns in the dataframe that are potentially interesting to explore (ex., comparing the productions between "Fresh Market", "Processing", "Not Sold", "Utilized"). But, due to the vast amount of missing values in those columns, we conclude that there is not much insight we can extract from them.
+
+Finally, our analysis lead to some new research questions for future study.
+
+1\) What factors make the strawberry yield of California and Florida so high? Are there some factors that distinguish them from the other states selected for this study?
+
+2\) Does strawberry yield value have a negative correlation to low variation?
+
+3\) How does the strawberry yield relate to other matrices that determine the success of strawberry agriculture in a state?
+
+### EDA: Organic vs Conventional strawberry yield of the entire U.S.
+
+Because we do not have sufficient data , we do not have any meaningful findings about the difference between organic strawberry and conventional strawberry in terms of yield. On the good side, it provides us a good opportunity to practice data cleaning.
