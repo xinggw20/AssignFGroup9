@@ -1,0 +1,5 @@
+"0",""
+"0","artists_nat_paint |> kbl(caption=""And the rows"") |> "
+"0","                     kable_classic_2(""hover"",full_width = T, html_font = ""Calibri"") |>  "
+"0","                     column_spec(4,color=spec_color(artists_nat_paint$paintings)) |> "
+"0","                     row_spec(7,background=""lightblue"")"

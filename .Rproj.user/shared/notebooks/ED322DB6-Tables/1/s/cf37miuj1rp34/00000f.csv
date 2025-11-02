@@ -1,0 +1,6 @@
+"0","artists_nat_paint |> "
+"0","  kbl(caption = ""Column Widths and Colors"") |> "
+"0","  kable_classic_2(""hover"", full_width = TRUE, html_font = ""Calibri"") |> "
+"0","  column_spec(1, width = ""10em"") |>"
+"0","  column_spec(2, width = ""8em"", bold = TRUE, color = ""darkblue"") |> "
+"0","  column_spec(4, width = ""5em"", background = ""#F5F5F5"")           "

@@ -1,0 +1,6 @@
+"0","strawberry.sur.wider %>%"
+"0","  ggplot(aes(x=State, y=`ACRES PLANTED`, fill=State)) +"
+"0","  scale_x_discrete(labels=c(""CA"", ""FL"", ""NY"", ""NC"", ""OR"", ""WA"")) +"
+"0","  geom_boxplot() +"
+"0","  labs(x=""State"", y=""Yield"") +"
+"0","  ggtitle(""Yield by State"")"

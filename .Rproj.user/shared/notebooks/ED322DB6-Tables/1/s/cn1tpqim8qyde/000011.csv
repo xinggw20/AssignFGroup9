@@ -1,0 +1,2 @@
+"0",""
+"0","artists_nat_paint<-artists |> select(c(name,years,nationality,paintings)) |> top_n(n=10)"

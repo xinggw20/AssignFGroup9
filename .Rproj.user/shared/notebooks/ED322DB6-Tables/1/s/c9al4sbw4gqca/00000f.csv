@@ -1,0 +1,4 @@
+"0","artists_nat_paint |> "
+"0","  kbl(caption=""Scrollable Table"") |> "
+"0","  kable_paper(""hover"", full_width = T, html_font = ""Arial"") |> "
+"0","  scroll_box(width = ""80%"", height = ""300px"")"

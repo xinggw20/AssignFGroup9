@@ -1,0 +1,5 @@
+"0","artists_nat_paint |> "
+"0","  arrange(nationality) |> "
+"0","  kbl(caption = ""Collapsed Rows Example"") |> "
+"0","  collapse_rows(columns = 3, valign = ""top"") |> "
+"0","  kable_classic(full_width = F)"

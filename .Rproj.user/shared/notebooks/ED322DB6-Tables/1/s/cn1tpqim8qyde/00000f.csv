@@ -1,0 +1,2 @@
+"0",""
+"0","artists |> select(c(name,years,nationality,paintings)) |> top_n(n=10) |> kbl(caption=""Expressionist Painters"")"

@@ -1,0 +1,7 @@
+"0",""
+"0","strawberry.sur.wider %>%"
+"0","  filter(Year %in% 2012:2024) %>%"
+"0","  ggplot(aes(x=as.character(Year), y=`YIELD, MEASURED IN CWT / ACRE`, fill=as.character(Year))) +"
+"0","  geom_boxplot() +"
+"0","  labs(x=""Year"", y=""Yield"") +"
+"0","  ggtitle(""Yield by Year"") "

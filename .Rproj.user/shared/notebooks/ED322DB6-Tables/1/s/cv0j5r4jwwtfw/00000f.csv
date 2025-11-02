@@ -1,0 +1,6 @@
+"0","artists_nat_paint %>%"
+"0","  arrange(nationality) %>%"
+"0","  kbl(caption = ""Collapsed by Nationality"") %>%"
+"0","  collapse_rows(columns = which(names(artists_nat_paint) == ""nationality""), valign = ""top"") %>%"
+"0","  kable_paper(""hover"", full_width = FALSE) %>%"
+"0","  scroll_box(height = ""350px"")"

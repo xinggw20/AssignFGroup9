@@ -1,0 +1,2 @@
+"0","artists_nat_paint |>  kbl(caption=""We can hover over the entries"") |> "
+"0","                     kable_classic(""hover"",full_width = F, html_font = ""Cambria"")"

@@ -1,0 +1,4 @@
+"0","artists_nat_paint |> kbl(caption=""We can color in columns"") |> "
+"0","                     kable_classic_2(""hover"",full_width = T, html_font = ""Calibri"") |>  "
+"0","                     column_spec(2,background=""pink"") |> "
+"0","                     column_spec(4,color=spec_color(artists_nat_paint$paintings))"
