@@ -1,5 +1,10 @@
 Assignment F, Group 9
 
+Group members:
+Zhenyu Li
+Guowen Xing
+Qiming Tian
+
 In this project, we will explore the data of strawberry agriculture in the United States obtained from USDA. Specifically, our research will focus on the strawberry yield, the ratio of crop grown to the unit area of land, of various states from 1998 to 2024.
 
 Firstly, we will conduct some basic exploratory data analysis (EDA) on the survey data of strawberry yield of some selected states, trying to answer the following research questions:
